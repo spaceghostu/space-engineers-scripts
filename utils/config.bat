@@ -5,11 +5,11 @@ set SE_SCRIPTS_DIR=%SE_DIR%\IngameScripts\local
 set CS=Script.cs
 set PNG=thumb.png
 
-set git_dir=
+set git_dir=C:\Program Files\Git
 
-for /f "usebackq delims=" %%i in (`where git 2^>NUL`) do (
-  set git_dir=%%~dpi..
-)
+@REM for /f "usebackq delims=" %%i in (`where git 2^>NUL`) do (
+@REM   set git_dir=%%~dpi..
+@REM )
 
 if "%git_dir%" == "" (
   echo Git not found.

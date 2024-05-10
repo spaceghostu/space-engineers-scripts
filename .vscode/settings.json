@@ -3,5 +3,7 @@
     "bin/": true,
     "obj/": true
   },
-  "dotnet.server.useOmnisharp": true
+  "dotnet.server.useOmnisharp": true,
+  "terminal.integrated.shell.windows": "C:\\Program Files\\Git\\bin\\bash.exe"
+
 }
