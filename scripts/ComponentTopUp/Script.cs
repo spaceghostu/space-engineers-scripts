@@ -34,7 +34,6 @@ namespace ComponentTopUp
         // {
         //     Runtime.UpdateFrequency = UpdateFrequency.Update100; // Run the script every 100 updates (approx. every 1.6 seconds)
         // }
-
         public void Main(string argument, UpdateType updateSource)
         {
             var targetItemAmount = 100;
@@ -62,6 +61,16 @@ namespace ComponentTopUp
             inventory.GetItems(items);
             Echo($"Found {items.Count} items in the container.");
 
+            // Gather currently queued items
+            List<MyProductionItem> currentQueue = new List<MyProductionItem>();
+            assembler.GetQueue(currentQueue);
+            var currentlyQueued = new HashSet<string>();
+            foreach (var queuedItem in currentQueue)
+            {
+                currentlyQueued.Add(NormalizeName(queuedItem.BlueprintId.SubtypeName));
+                Echo($"Already in queue: {NormalizeName(queuedItem.BlueprintId.SubtypeName)}");
+            }
+
             Dictionary<string, int> neededComponents = new Dictionary<string, int>
             {
                 { "ComputerComponent", targetItemAmount },
@@ -78,28 +87,39 @@ namespace ComponentTopUp
             // Check current stock and decide how much to queue
             foreach (var item in items)
             {
-                string itemType = item.Type.SubtypeId.ToString(); // Using SubtypeId which corresponds to the component type
+                string itemType = NormalizeName(item.Type.SubtypeId.ToString());
                 Echo($"Checking item: {itemType}, Amount: {item.Amount}");
 
-                if (neededComponents.ContainsKey(itemType))
+                if (
+                    neededComponents.ContainsKey(
+                        itemType + (itemType.EndsWith("Component") ? "" : "Component")
+                    ) && !currentlyQueued.Contains(itemType)
+                )
                 {
                     int needed = targetItemAmount - (int)item.Amount;
                     if (needed > 0)
                     {
                         Echo($"Queueing {needed} of {itemType}");
                         MyDefinitionId blueprintId = MyDefinitionId.Parse(
-                            "MyObjectBuilder_BlueprintDefinition/" + itemType
+                            "MyObjectBuilder_BlueprintDefinition/"
+                                + itemType
+                                + (itemType.EndsWith("Component") ? "" : "Component")
                         );
                         assembler.AddQueueItem(blueprintId, (VRage.MyFixedPoint)needed);
                     }
-                    neededComponents[itemType] = Math.Max(0, needed);
+                    neededComponents[
+                        itemType + (itemType.EndsWith("Component") ? "" : "Component")
+                    ] = Math.Max(0, needed);
                 }
             }
 
-            // Queue items not present in the cargo at all
+            // Queue items not present in the cargo at all and not already queued
             foreach (var component in neededComponents)
             {
-                if (component.Value == targetItemAmount)
+                if (
+                    component.Value == targetItemAmount
+                    && !currentlyQueued.Contains(component.Key.Replace("Component", ""))
+                )
                 {
                     MyDefinitionId blueprintId = MyDefinitionId.Parse(
                         "MyObjectBuilder_BlueprintDefinition/" + component.Key
@@ -110,6 +130,12 @@ namespace ComponentTopUp
             }
 
             Echo("Script execution completed successfully.");
+        }
+
+        // Helper method to normalize item names
+        private string NormalizeName(string name)
+        {
+            return name.Replace("Component", "");
         }
         #endregion // ComponentTopUp
     }
